@@ -1,4 +1,4 @@
-# Let's do a datalayer in JPA
+# Update curse and delete course not working
 
 # /landing/pom.xml
 ```xml
@@ -175,6 +175,55 @@ public class CourseBean implements Serializable {
             return null; // Stay on the same page in case of error
         }
     }
+
+    public void editCourse(Course course) {
+        this.newCourse = course; // Or a deep copy if needed
+    }
+    
+    public String updateCourse() {
+        if (entityManager == null) {
+            System.out.println("\n\nEntityManager is NULL!"); // Check logs
+        } else {
+            System.out.println("\n\nEntityManager is NOT NULL!"); // Check logs
+        }        
+        EntityTransaction transaction = entityManager.getTransaction();
+        try {
+            transaction.begin();
+            entityManager.merge(newCourse); // Assuming newCourse has the courseId
+            transaction.commit();
+            newCourse = new Course(); // Reset the form
+            loadCourses(); // Refresh the list
+            FacesContext.getCurrentInstance().addMessage(null, new FacesMessage("Course updated successfully!"));
+            return "/course/list_courses.xhtml";
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (transaction.isActive()) {
+                transaction.rollback();
+            }
+            FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR.toString(), "Error adding course: " + e.getMessage()));
+            return null; // Stay on the same page in case of error
+        }
+    }    
+
+    public void deleteCourse(String courseId) {
+        EntityTransaction transaction = entityManager.getTransaction();
+        try {
+            transaction.begin();
+            Course course = entityManager.find(Course.class, courseId);
+            if (course != null) {
+                entityManager.remove(course);
+            }
+            transaction.commit();
+            loadCourses(); // Refresh the list
+            FacesContext.getCurrentInstance().addMessage(null, new FacesMessage("Course deleted successfully!"));
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (transaction.isActive()) {
+                transaction.rollback();
+            }
+            FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR.toString(), "Error adding course: " + e.getMessage()));
+        }
+    }    
 }
 ```
 # /landing/src/java/br/com/landing/beans/Course.java
@@ -403,7 +452,99 @@ public class Course {
 </h:body>
 </html>
 ```
+# /landing/webapp/course/update_course.xhtml
+```xhtml
+<?xml version="1.0" encoding="UTF-8"?>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:f="http://xmlns.jcp.org/jsf/core">
+<h:head>
+    <title>Courses</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+    <style type="text/css">
+        body {
+            padding-top: 70px; /* Espaçamento para o navbar fixo */
+        }
+        .custom-container {
+            max-width: 800px; /* Largura máxima do conteúdo principal */
+            margin: 0 auto; /* Centraliza o conteúdo */
+        }
+    </style>
+</h:head>
+<h:body>
 
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="#">My JSF App</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="#">Courses</a>
+                    </li>
+                    </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container custom-container">
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h1>Courses</h1>
+                    </div>
+                    <div class="card-body">
+                        <f:metadata>
+                            <f:viewParam name="courseId" value="#{courseBean.newCourse.courseId}" converter="javax.faces.convert.StringType" required="true" />
+                            <f:event type="preRenderView" listener="#{courseBean.editCourse(courseBean.newCourse)}"/>
+                        </f:metadata>
+                        
+                        <h:form>
+                            <h:inputText value="#{courseBean.newCourse.title}" />
+                            <h:commandButton value="Update" action="#{courseBean.updateCourse}" />
+                        </h:form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!--
+    <footer class="footer mt-auto py-3 bg-light">
+        <div class="container text-center">
+            <span class="text-muted">Copyright 2023 My JSF App</span>
+        </div>
+    </footer>
+    -->
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // JavaScript para validação de formulário Bootstrap
+        (() => {
+            'use strict'
+
+            // Fetch all the forms we want to apply custom Bootstrap validation styles to
+            const forms = document.querySelectorAll('.needs-validation')
+
+            // Loop over them and prevent submission
+            forms.forEach(form => {
+                form.addEventListener('submit', event => {
+                    if (!form.checkValidity()) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                    }
+
+                    form.classList.add('was-validated')
+                }, false)
+            })
+        })()
+    </script>
+</h:body>
+</html>
+```
 # /landing/webapp/course/add_course.xhtml
 ```xhtml
 <?xml version="1.0" encoding="UTF-8"?>
