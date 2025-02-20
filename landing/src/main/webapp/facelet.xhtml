@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:ui="http://xmlns.jcp.org/jsf/facelets"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:f="http://xmlns.jcp.org/jsf/core">
+
+<ui:composition template="/WEB-INF/templates/template.xhtml">
+
+    <ui:define name="title">Courses</ui:define>
+
+    <ui:define name="menu">
+        <li class="nav-item">
+            <a class="nav-link" href="#">Home</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link active" href="#">Courses</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="#">Students</a>
+        </li>
+    </ui:define>
+
+    <ui:define name="content">
+        <h1>Course List</h1>
+
+        <h:form id="courseListForm">
+            <h:dataTable value="#{courseBean.courses}" var="course" styleClass="table table-striped">
+                <h:column>
+                    <f:facet name="header">Course ID</f:facet>
+                    <h:outputText value="#{course.courseId}" />
+                </h:column>
+                <h:column>
+                    <f:facet name="header">Title</f:facet>
+                    <h:outputText value="#{course.title}" />
+                </h:column>
+                <h:column>
+                    <f:facet name="header">Department</f:facet>
+                    <h:outputText value="#{course.departmentName}" />
+                </h:column>
+                <h:column>
+                    <f:facet name="header">Credits</f:facet>
+                    <h:outputText value="#{course.credits}" />
+                </h:column>
+                <h:column>
+                    <f:facet name="header">Actions</f:facet>
+                    <h:link outcome="/course/update">
+                        <f:param name="courseId" value="#{course.courseId}" />
+                        Edit
+                    </h:link>
+                </h:column>
+                <h:column>
+                    <f:facet name="header">Actions</f:facet>
+                    <h:commandButton value="Delete" action="#{courseBean.deleteCourse(course.courseId)}">
+                        <f:ajax execute="@this" render="@form" />
+                    </h:commandButton>
+                </h:column>
+            </h:dataTable>
+        </h:form>
+
+    </ui:define>
+
+</ui:composition>
+
+</html>
