@@ -25,7 +25,6 @@
             <groupId>javax</groupId>
             <artifactId>javaee-api</artifactId>
             <version>7.0</version>
-            <scope>provided</scope>
         </dependency>
 
         <dependency>
@@ -33,13 +32,19 @@
             <artifactId>javax.faces</artifactId>
             <version>2.2.10</version>
         </dependency>        
+        
+<!-- https://mvnrepository.com/artifact/com.sun.facelets/jsf-facelets -->
+<dependency>
+    <groupId>com.sun.facelets</groupId>
+    <artifactId>jsf-facelets</artifactId>
+    <version>1.1.14</version>
+</dependency>
 
 <!-- https://mvnrepository.com/artifact/org.mariadb.jdbc/mariadb-java-client -->
 <dependency>
     <groupId>org.mariadb.jdbc</groupId>
     <artifactId>mariadb-java-client</artifactId>
-    <version>3.5.2</version>
-    <scope>provided</scope>  </dependency>
+    <version>3.5.2</version> </dependency>
 
 <dependency>
     <groupId>org.hibernate</groupId>
@@ -96,6 +101,9 @@ import javax.persistence.*;
 import java.util.List;
 import javax.annotation.PostConstruct;
 
+import javax.faces.event.ComponentSystemEvent;
+import java.util.Map;
+
 @ManagedBean(name = "courseBean")
 @ViewScoped
 public class CourseBean implements Serializable {
@@ -104,43 +112,12 @@ public class CourseBean implements Serializable {
     private EntityManager entityManager;
 
     private List<Course> courses;
-    private Course newCourse = new Course(); // Initialize newCourse!
-
-    @PostConstruct  // Recommended way to initialize courses
-    private void init() {
-        try {
-            EntityManagerFactory emf = Persistence.createEntityManagerFactory("landing-pu"); // Same name!
-            entityManager = emf.createEntityManager();
-            if (entityManager == null) {
-                System.out.println("EntityManager is NULL!");
-            } else {
-                System.out.println("EntityManager is NOT NULL!");
-            }
-        } catch (Exception e) {
-            e.printStackTrace(); // Log the exception!
-        }
-        loadCourses();
-    }
-
 
     public List<Course> getCourses() {
         return courses;
     }
 
-    private void loadCourses() {
-        if (entityManager == null) {
-            System.out.println("\n\nEntityManager is NULL!"); // Check logs
-        } else {
-            System.out.println("\n\nEntityManager is NOT NULL!"); // Check logs
-        }
-        try {
-            TypedQuery<Course> query = entityManager.createQuery("SELECT c FROM Course c", Course.class);
-            courses = query.getResultList();
-        } catch (Exception e) {
-            e.printStackTrace(); // Handle exceptions appropriately in a real app
-            FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR.toString(), "Error loading courses."));
-        }
-    }
+    private Course newCourse = new Course(); // Initialize newCourse!
 
     public Course getNewCourse() {
         return newCourse;
@@ -150,12 +127,44 @@ public class CourseBean implements Serializable {
         this.newCourse = newCourse;
     }
 
-    public String addCourse() {
+    private void testEntityManager() {
         if (entityManager == null) {
-            System.out.println("\n\nEntityManager is NULL!"); // Check logs
+            System.out.println("\n\nEntityManager is NULL!"); // Check logs        
         } else {
             System.out.println("\n\nEntityManager is NOT NULL!"); // Check logs
         }        
+    }
+
+    @PostConstruct  // Recommended way to initialize courses
+    private void init() {
+        try {
+            EntityManagerFactory emf = Persistence.createEntityManagerFactory("landing-pu"); // Same name!
+            entityManager = emf.createEntityManager();
+            
+            this.testEntityManager();
+
+        } catch (Exception e) {
+            e.printStackTrace(); // Log the exception!
+        }
+        loadCourses();
+    }
+
+    private void loadCourses() {
+        this.testEntityManager();
+
+        try {
+            TypedQuery<Course> query = entityManager.createQuery("SELECT c FROM Course c", Course.class);
+            courses = query.getResultList();
+        } catch (Exception e) {
+            e.printStackTrace(); // Handle exceptions appropriately in a real app
+            FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR.toString(), "Error loading courses."));
+        }
+    }
+
+
+    public String addCourse() {
+        this.testEntityManager();
+
         EntityTransaction transaction = entityManager.getTransaction();
         try {
             transaction.begin();
@@ -164,7 +173,7 @@ public class CourseBean implements Serializable {
 
             newCourse = new Course(); // Reset the form
             FacesContext.getCurrentInstance().addMessage(null, new FacesMessage("Course added successfully!"));
-            return "/course/list_courses.xhtml"; // Or stay on the same page: return null;
+            return "/course/list.xhtml"; // Or stay on the same page: return null;
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -176,16 +185,38 @@ public class CourseBean implements Serializable {
         }
     }
 
-    public void editCourse(Course course) {
-        this.newCourse = course; // Or a deep copy if needed
+    public void loadCourseForEdit(ComponentSystemEvent event) {
+        FacesContext context = FacesContext.getCurrentInstance();
+        Map<String, String> params = context.getExternalContext().getRequestParameterMap();
+        String courseId = params.get("courseId");
+    
+        if (courseId != null) {
+            newCourse.setCourseId(courseId); // Set the ID in your bean
+            editCourse(); // Then call your editCourse method
+        } else {
+            // Handle the case where courseId is missing (e.g., redirect or error message)
+        }
+    }
+    
+    
+    public void editCourse() {
+        this.testEntityManager();
+
+        if (newCourse.getCourseId() != null) { // Check if courseId is set
+            this.newCourse = entityManager.find(Course.class, newCourse.getCourseId());
+            if (this.newCourse == null){
+                FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR.toString(), "Course not found"));
+                return;
+            }
+        } else {
+            // Handle the case where courseId is not provided (e.g., redirect or show an error message)
+            FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR.toString(), "Course ID is required for editing."));
+        }
     }
     
     public String updateCourse() {
-        if (entityManager == null) {
-            System.out.println("\n\nEntityManager is NULL!"); // Check logs
-        } else {
-            System.out.println("\n\nEntityManager is NOT NULL!"); // Check logs
-        }        
+        this.testEntityManager();
+
         EntityTransaction transaction = entityManager.getTransaction();
         try {
             transaction.begin();
@@ -194,7 +225,7 @@ public class CourseBean implements Serializable {
             newCourse = new Course(); // Reset the form
             loadCourses(); // Refresh the list
             FacesContext.getCurrentInstance().addMessage(null, new FacesMessage("Course updated successfully!"));
-            return "/course/list_courses.xhtml";
+            return "/course/list.xhtml";
         } catch (Exception e) {
             e.printStackTrace();
             if (transaction.isActive()) {
@@ -206,15 +237,21 @@ public class CourseBean implements Serializable {
     }    
 
     public void deleteCourse(String courseId) {
+        this.testEntityManager();
+
         EntityTransaction transaction = entityManager.getTransaction();
         try {
             transaction.begin();
-            Course course = entityManager.find(Course.class, courseId);
+            Course course = entityManager.find(Course.class, courseId); // Retrieve managed entity
             if (course != null) {
                 entityManager.remove(course);
+            } else {
+                 FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR.toString(), "Course not found for deletion"));
+                 transaction.rollback(); // Important rollback here
+                 return; // Exit to prevent commit of incomplete transaction
             }
             transaction.commit();
-            loadCourses(); // Refresh the list
+            loadCourses();
             FacesContext.getCurrentInstance().addMessage(null, new FacesMessage("Course deleted successfully!"));
         } catch (Exception e) {
             e.printStackTrace();
@@ -223,7 +260,8 @@ public class CourseBean implements Serializable {
             }
             FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR.toString(), "Error adding course: " + e.getMessage()));
         }
-    }    
+    }
+    
 }
 ```
 # /landing/src/java/br/com/landing/beans/Course.java
@@ -231,10 +269,11 @@ public class CourseBean implements Serializable {
 package br.com.landing.beans;
 
 import javax.persistence.*;
+import java.io.Serializable;
 
 @Entity
 @Table(name = "course") // Optional: Specify table name if different from class name
-public class Course {
+public class Course implements Serializable {
 
     @Id
     @Column(name = "course_id") // Optional: Specify column name if different from field name
@@ -292,6 +331,51 @@ public class Course {
                 ", departmentName='" + departmentName + '\'' +
                 ", credits=" + credits +
                 '}';
+    }
+}
+```
+# /landing/src/java/br/com/landing/TestBean.java
+```java
+package br.com.landing.beans;
+
+import javax.faces.bean.ManagedBean;
+import javax.faces.bean.ViewScoped;
+import java.io.Serializable;
+import javax.faces.application.FacesMessage;
+import javax.faces.context.FacesContext;
+import javax.persistence.*;
+import java.util.List;
+import javax.annotation.PostConstruct;
+
+
+@ManagedBean
+@ViewScoped
+public class TestBean implements Serializable {
+
+    @PersistenceContext(unitName = "landing-pu")  // Double-check the name!
+    private transient EntityManager entityManager;
+
+    @PostConstruct
+    public void init() {
+        try {
+            EntityManagerFactory emf = Persistence.createEntityManagerFactory("landing-pu"); // Same name!
+            entityManager = emf.createEntityManager();
+            if (entityManager == null) {
+                System.out.println("EntityManager is NULL!");
+            } else {
+                System.out.println("EntityManager is NOT NULL!");
+            }
+        } catch (Exception e) {
+            e.printStackTrace(); // Log the exception!
+        }
+    }
+
+    public String test() {
+        if (entityManager == null) {
+            return "EntityManager is NULL!"; // Display on the page
+        } else {
+            return "EntityManager is NOT NULL!"; // Display on the page
+        }
     }
 }
 ```
@@ -368,22 +452,93 @@ public class Course {
 ```
 # /landing/webapp/index.xhtml
 ```xhtml
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml"
-      xmlns:h="http://xmlns.jcp.org/jsf/html">
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:f="http://xmlns.jcp.org/jsf/core">
 
 <h:head>
     <title>Landing Page</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+    <style type="text/css">
+        body {
+            padding-top: 70px; /* Adjust for navbar height */
+        }
+        .jumbotron {
+            background-color: #f8f9fa; /* Light gray background */
+            padding: 4rem 2rem;
+            margin-bottom: 2rem;
+            border-radius: .3rem;
+        }
+        .jumbotron h1 {
+            font-weight: 700;
+        }
+    </style>
 </h:head>
 
 <h:body>
-    <h1>Welcome to My Landing Page</h1>
 
-    <h:form>
-        <h:outputText value="This is the index page." /> <br/>
-        <h:link outcome="helloworld" value="Go to Hello World Page" />  </h:form>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="#">Landing Education</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#{request.contextPath}/test.jsf">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">About</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Contact</a>
+                    </li>
+                    </ul>
+            </div>
+        </div>
+    </nav>
+
+    <main role="main" class="container">
+
+        <div class="jumbotron">
+            <h1 class="display-4">Welcome to Landing, My JSF App!</h1>
+            <p class="lead">This is a simple landing page built with JSF and Bootstrap.</p>
+            <hr class="my-4"/>
+            <p>It uses JSF for server-side processing and Bootstrap for styling and layout.</p>
+            <a class="btn btn-primary btn-lg" href="#" role="button">Learn more</a>
+        </div>
+
+        <div class="row">
+            <div class="col-md-4">
+                <h2>Heading</h2>
+                <p>Some representative placeholder content for the three columns of text. Each column will contain the same placeholder text.</p>
+                <p><a class="btn btn-secondary" href="#" role="button">View details</a></p>
+            </div>
+            <div class="col-md-4">
+                <h2>Heading</h2>
+                <p>Some representative placeholder content for the three columns of text. Each column will contain the same placeholder text.</p>
+                <p><a class="btn btn-secondary" href="#" role="button">View details</a></p>
+            </div>
+            <div class="col-md-4">
+                <h2>Heading</h2>
+                <p>Some representative placeholder content for the three columns of text. Each column will contain the same placeholder text.</p>
+                <p><a class="btn btn-secondary" href="#" role="button">View details</a></p>
+            </div>
+        </div>
+
+        <hr/>
+
+    </main>
+
+    <footer class="container">
+        <p>2025 Landing</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>        
+
 </h:body>
-
 </html>
 ```
 
@@ -394,7 +549,7 @@ public class Course {
       xmlns:h="http://xmlns.jcp.org/jsf/html"
       xmlns:ui="http://xmlns.jcp.org/jsf/facelets">  <h:head>
     <title>Test Page</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
     <style type="text/css">
         body {
             padding-top: 70px; /* Espaçamento para o navbar fixo */
@@ -407,21 +562,22 @@ public class Course {
 </h:head>
 <h:body>
 
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">  <div class="container">
-            <a class="navbar-brand" href="#">My JSF App</a>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">  
+        <div class="container">
+            <a class="navbar-brand" href="#{request.contextPath}/">Landing</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav">
                     <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="#">Home</a>
+                        <a class="nav-link active" aria-current="page" href="#{request.contextPath}/test.jsf">Home</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#{request.contextPath}/course/add_course.jsf">Add Course</a>
+                        <a class="nav-link" href="#{request.contextPath}/course/add.jsf">Add Course</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#{request.contextPath}/course/list_courses.jsf">List Course</a>
+                        <a class="nav-link" href="#{request.contextPath}/course/list.jsf">List Course</a>
                     </li>
                 </ul>
             </div>
@@ -452,39 +608,47 @@ public class Course {
 </h:body>
 </html>
 ```
-# /landing/webapp/course/update_course.xhtml
+# /landing/webapp/course/update.xhtml
 ```xhtml
 <?xml version="1.0" encoding="UTF-8"?>
 <html xmlns="http://www.w3.org/1999/xhtml"
       xmlns:h="http://xmlns.jcp.org/jsf/html"
       xmlns:f="http://xmlns.jcp.org/jsf/core">
+
 <h:head>
-    <title>Courses</title>
+    <title>Update Course</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
     <style type="text/css">
         body {
-            padding-top: 70px; /* Espaçamento para o navbar fixo */
+            padding-top: 70px;
         }
         .custom-container {
-            max-width: 800px; /* Largura máxima do conteúdo principal */
-            margin: 0 auto; /* Centraliza o conteúdo */
+            max-width: 800px;
+            margin: 0 auto;
         }
     </style>
 </h:head>
+
 <h:body>
 
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">  
         <div class="container">
-            <a class="navbar-brand" href="#">My JSF App</a>
+            <a class="navbar-brand" href="#{request.contextPath}/">Landing</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav">
                     <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="#">Courses</a>
+                        <a class="nav-link" href="#{request.contextPath}/test.jsf">Home</a>
                     </li>
-                    </ul>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#{request.contextPath}/course/add.jsf">Add Course</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="#{request.contextPath}/course/list.jsf">List Course</a>
+                    </li>
+                </ul>
             </div>
         </div>
     </nav>
@@ -494,58 +658,63 @@ public class Course {
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
-                        <h1>Courses</h1>
+                        <h1>Update Course</h1>
                     </div>
                     <div class="card-body">
-                        <f:metadata>
-                            <f:viewParam name="courseId" value="#{courseBean.newCourse.courseId}" converter="javax.faces.convert.StringType" required="true" />
-                            <f:event type="preRenderView" listener="#{courseBean.editCourse(courseBean.newCourse)}"/>
-                        </f:metadata>
-                        
-                        <h:form>
-                            <h:inputText value="#{courseBean.newCourse.title}" />
-                            <h:commandButton value="Update" action="#{courseBean.updateCourse}" />
+
+                        <f:event type="preRenderView" listener="#{courseBean.loadCourseForEdit}" />
+
+                        <h:form styleClass="needs-validation">
+                            <h:inputHidden value="#{courseBean.newCourse.courseId}" />
+
+                            <div class="mb-3">
+                                <h:outputLabel for="title" value="Title:" styleClass="form-label"/>
+                                <h:inputText id="title" value="#{courseBean.newCourse.title}" required="true" styleClass="form-control"/>
+                                <div class="invalid-feedback">Title is required.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <h:outputLabel for="department" value="Department:" styleClass="form-label"/>
+                                <h:inputText id="department" value="#{courseBean.newCourse.departmentName}" required="true" styleClass="form-control"/>
+                                <div class="invalid-feedback">Department is required.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <h:outputLabel for="credits" value="Credits:" styleClass="form-label"/>
+                                <h:inputText id="credits" value="#{courseBean.newCourse.credits}" required="true" styleClass="form-control"/>
+                                <div class="invalid-feedback">Credits is required.</div>
+                            </div>
+
+                            <h:commandButton value="Update" action="#{courseBean.updateCourse}" styleClass="btn btn-primary"/>
                         </h:form>
+
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!--
-    <footer class="footer mt-auto py-3 bg-light">
-        <div class="container text-center">
-            <span class="text-muted">Copyright 2023 My JSF App</span>
-        </div>
-    </footer>
-    -->
-    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // JavaScript para validação de formulário Bootstrap
         (() => {
             'use strict'
-
-            // Fetch all the forms we want to apply custom Bootstrap validation styles to
             const forms = document.querySelectorAll('.needs-validation')
-
-            // Loop over them and prevent submission
             forms.forEach(form => {
                 form.addEventListener('submit', event => {
                     if (!form.checkValidity()) {
                         event.preventDefault()
                         event.stopPropagation()
                     }
-
                     form.classList.add('was-validated')
                 }, false)
             })
         })()
     </script>
+
 </h:body>
 </html>
 ```
-# /landing/webapp/course/add_course.xhtml
+# /landing/webapp/course/add.xhtml
 ```xhtml
 <?xml version="1.0" encoding="UTF-8"?>
 <html xmlns="http://www.w3.org/1999/xhtml"
@@ -566,18 +735,24 @@ public class Course {
 </h:head>
 <h:body>
 
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">  
         <div class="container">
-            <a class="navbar-brand" href="#">My JSF App</a>
+            <a class="navbar-brand" href="#{request.contextPath}/">Landing</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav">
                     <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="#">Courses</a>
+                        <a class="nav-link" href="#{request.contextPath}/test.jsf">Home</a>
                     </li>
-                    </ul>
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="#{request.contextPath}/course/add.jsf">Add Course</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#{request.contextPath}/course/list.jsf">List Course</a>
+                    </li>
+                </ul>
             </div>
         </div>
     </nav>
@@ -656,37 +831,48 @@ public class Course {
 </html>
 ```
 
-# /landing/webapp/course/list_course.xhtml
+# /landing/webapp/course/list.xhtml
 ```xhtml
 <?xml version="1.0" encoding="UTF-8"?>
-<html xmlns="http://www.w3.org/1999/xhtml"
-      xmlns:h="http://xmlns.jcp.org/jsf/html"
-      xmlns:f="http://xmlns.jcp.org/jsf/core">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:h="http://xmlns.jcp.org/jsf/html"
+    xmlns:f="http://xmlns.jcp.org/jsf/core">
+
 <h:head>
     <title>Courses</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
     <style type="text/css">
         body {
-            padding-top: 70px; /* Espaçamento para o navbar fixo */
+            padding-top: 70px;
+            /* Espaçamento para o navbar fixo */
         }
+
         .custom-container {
-            max-width: 800px; /* Largura máxima do conteúdo principal */
-            margin: 0 auto; /* Centraliza o conteúdo */
+            max-width: 800px;
+            /* Largura máxima do conteúdo principal */
+            margin: 0 auto;
+            /* Centraliza o conteúdo */
         }
     </style>
 </h:head>
+
 <h:body>
 
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">  
         <div class="container">
-            <a class="navbar-brand" href="#">My JSF App</a>
+            <a class="navbar-brand" href="#{request.contextPath}/">Landing</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav">
                     <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="#">Courses</a>
+                        <a class="nav-link" href="#{request.contextPath}/test.jsf">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#{request.contextPath}/course/add.jsf">Add Course</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="#{request.contextPath}/course/list.jsf">List Course</a>
                     </li>
                 </ul>
             </div>
@@ -701,7 +887,8 @@ public class Course {
                         <h1>Courses</h1>
                     </div>
                     <div class="card-body">
-                        <h:dataTable value="#{courseBean.courses}" var="course" styleClass="table table-striped">
+                        <h:form id="courseListForm"> </h:form>
+                        <h:dataTable id="courseTable" value="#{courseBean.courses}" var="course" styleClass="table table-striped">
                             <h:column>
                                 <f:facet name="header">Course ID</f:facet>
                                 <h:outputText value="#{course.courseId}" />
@@ -718,20 +905,46 @@ public class Course {
                                 <f:facet name="header">Credits</f:facet>
                                 <h:outputText value="#{course.credits}" />
                             </h:column>
+                            <h:column>
+                                <f:facet name="header">Actions</f:facet>
+                                <h:link outcome="update">
+                                    <f:param name="courseId" value="#{course.courseId}" />
+                                    Edit
+                                </h:link>
+                            </h:column>
+                            <h:column>
+                                <h:form>
+
+                                    <f:facet name="header">Actions</f:facet>
+                                    <h:commandButton value="Delete"
+                                        action="#{courseBean.deleteCourse(course.courseId)}">
+                                        <f:ajax execute="@this" render="courseTable" />
+                                    </h:commandButton>
+
+                                </h:form>
+                            </h:column>
                         </h:dataTable>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    <!--
-    <footer class="footer mt-auto py-3 bg-light">
-        <div class="container text-center">
-            <span class="text-muted">Copyright 2023 My JSF App</span>
-        </div>
-    </footer>
-    -->
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+</h:body>
+
+</html>
+```
+
+# /landing/webapp/db.xhtml
+```xhtml
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://xmlns.jcp.org/jsf/html">
+<h:head><title>Test</title></h:head>
+<h:body>
+    <h:outputText value="#{testBean.test()}" />
 </h:body>
 </html>
 ```
