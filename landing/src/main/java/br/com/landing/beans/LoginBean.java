@@ -16,6 +16,8 @@ import javax.annotation.PostConstruct;
 
 import org.mindrot.jbcrypt.BCrypt;
 
+import br.com.landing.entity.User;
+
 @ManagedBean(name = "loginBean")
 @SessionScoped // Keep the user logged in across requests
 public class LoginBean implements Serializable {

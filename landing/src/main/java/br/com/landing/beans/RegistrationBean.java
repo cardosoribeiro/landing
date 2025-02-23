@@ -14,6 +14,8 @@ import javax.annotation.PostConstruct;
 
 import org.mindrot.jbcrypt.BCrypt;
 
+import br.com.landing.entity.User;
+
 @ManagedBean(name = "registrationBean")
 @ViewScoped
 public class RegistrationBean {

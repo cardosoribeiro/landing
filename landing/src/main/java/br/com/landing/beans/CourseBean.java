@@ -12,6 +12,8 @@ import javax.annotation.PostConstruct;
 import javax.faces.event.ComponentSystemEvent;
 import java.util.Map;
 
+import br.com.landing.entity.Course;
+
 @ManagedBean(name = "courseBean")
 @ViewScoped
 public class CourseBean implements Serializable {

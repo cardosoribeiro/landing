@@ -9,4 +9,4 @@ The system uses JPA to persist the data and is being implemented with no intent 
 
 The project can grow in various directions. It may become an online e-learning plataform or be adopted by schools since some adaptations are perfomed.  
 
-It is a open source project. Open a issue or leave a pull request, all contributions are wellcome. Contact me in portuguese, spanish or english through the e-mail: cardosoribeiro.mail@gmail.com
+It is a open source project. Open an issue or leave a pull request, all contributions are wellcome. Contact me in portuguese, spanish or english through the e-mail: cardosoribeiro.mail@gmail.com

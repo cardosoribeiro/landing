@@ -1,4 +1,4 @@
-package br.com.landing.beans;
+package br.com.landing.entity;
 
 import javax.persistence.*;
 import java.io.Serializable;
