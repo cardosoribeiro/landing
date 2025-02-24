@@ -7,14 +7,15 @@ import javax.faces.bean.SessionScoped; // Important: Use SessionScoped
 import javax.faces.context.FacesContext;
 import javax.persistence.*;
 import javax.persistence.Persistence;
-//import javax.persistence.EntityManager;
-//import javax.persistence.PersistenceContext;
-//import javax.persistence.TypedQuery;
-//import javax.persistence.EntityManagerFactory;
 import java.io.Serializable;
 import javax.annotation.PostConstruct;
 
 import org.mindrot.jbcrypt.BCrypt;
+
+import org.apache.shiro.SecurityUtils;
+import org.apache.shiro.authc.AuthenticationException;
+import org.apache.shiro.authc.UsernamePasswordToken;
+import org.apache.shiro.subject.Subject;
 
 import br.com.landing.entity.User;
 
@@ -61,6 +62,12 @@ public class LoginBean implements Serializable {
             // and compare it to the stored hash using a secure comparison method.
             if (user != null && BCrypt.checkpw(password, user.getPassword())) { // Use BCrypt for password comparison
                 loggedInUser = user; // Store the logged-in user
+
+                Subject currentUser = SecurityUtils.getSubject();
+                UsernamePasswordToken token = new UsernamePasswordToken(user.getUsername(), password);
+
+                currentUser.login(token);
+        
                 FacesContext.getCurrentInstance().addMessage(null, new FacesMessage("Login successful!"));
                 return "/index.xhtml"; // Redirect to a welcome page
             } else {
@@ -77,6 +84,10 @@ public class LoginBean implements Serializable {
 
     public String logout() {
         loggedInUser = null; // Invalidate the session
+        
+        Subject currentUser = SecurityUtils.getSubject();
+        currentUser.logout();
+
         FacesContext.getCurrentInstance().getExternalContext().invalidateSession(); // Completely invalidate
         return "/login.xhtml"; // Redirect to login page (or wherever you want)
     }
