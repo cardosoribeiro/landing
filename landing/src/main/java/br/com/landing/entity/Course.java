@@ -4,24 +4,36 @@ import javax.persistence.*;
 import java.io.Serializable;
 
 @Entity
-@Table(name = "course") // Optional: Specify table name if different from class name
+@Table(name = "course")
 public class Course implements Serializable {
 
     @Id
-    @Column(name = "course_id") // Optional: Specify column name if different from field name
+    @Column(name = "course_id")
     private String courseId;
 
     @Column(name = "title")
     private String title;
 
-    @Column(name = "department_name") 
-    private String departmentName;
+    @ManyToOne
+    @JoinColumn(name = "department_name")
+    private Department department;
 
-    @Column(name = "credits") 
+    @Column(name = "credits")
     private int credits;
 
-    // **Essential: Getters and setters for ALL fields**
+    // Constructors (no-arg and parameterized)
+    public Course() {
+        this.department = new Department();
+    }
 
+    public Course(String courseId, String title, Department department, int credits) {
+        this.courseId = courseId;
+        this.title = title;
+        this.department = department;
+        this.credits = credits;
+    }
+
+    // Getters and setters
     public String getCourseId() {
         return courseId;
     }
@@ -38,12 +50,12 @@ public class Course implements Serializable {
         this.title = title;
     }
 
-    public String getDepartmentName() {
-        return departmentName;
+    public Department getDepartment() {
+        return department;
     }
 
-    public void setDepartmentName(String departmentName) {
-        this.departmentName = departmentName;
+    public void setDepartment(Department department) {
+        this.department = department;
     }
 
     public int getCredits() {
@@ -54,14 +66,28 @@ public class Course implements Serializable {
         this.credits = credits;
     }
 
-
     @Override
     public String toString() {
         return "Course{" +
                 "courseId='" + courseId + '\'' +
                 ", title='" + title + '\'' +
-                ", departmentName='" + departmentName + '\'' +
+                ", department=" + (department != null ? department.getDepartmentName() : null) + // Avoid null pointer exception
                 ", credits=" + credits +
                 '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Course course = (Course) o;
+
+        return courseId.equals(course.courseId);
+    }
+
+    @Override
+    public int hashCode() {
+        return courseId.hashCode();
     }
 }

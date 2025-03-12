@@ -13,6 +13,7 @@ import javax.faces.event.ComponentSystemEvent;
 import java.util.Map;
 
 import br.com.landing.entity.Course;
+import br.com.landing.entity.Department;
 
 @ManagedBean(name = "courseBean")
 @ViewScoped
@@ -22,9 +23,14 @@ public class CourseBean implements Serializable {
     private EntityManager entityManager;
 
     private List<Course> courses;
+    private List<Department> departments;
 
     public List<Course> getCourses() {
         return courses;
+    }
+
+    public List<Department> getDepartments() {
+        return departments;
     }
 
     private Course newCourse = new Course(); // Initialize newCourse!
@@ -52,11 +58,22 @@ public class CourseBean implements Serializable {
             entityManager = emf.createEntityManager();
             
             this.testEntityManager();
+            loadDepartments();
+            loadCourses();
 
         } catch (Exception e) {
             e.printStackTrace(); // Log the exception!
+        }        
+    }
+
+    private void loadDepartments() {
+        try {
+            TypedQuery<Department> query = entityManager.createQuery("SELECT d FROM Department d", Department.class);
+            departments = query.getResultList();
+        } catch (Exception e) {
+            e.printStackTrace();
+            FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR.toString(), "Error loading departments."));
         }
-        loadCourses();
     }
 
     private void loadCourses() {
@@ -78,6 +95,14 @@ public class CourseBean implements Serializable {
         EntityTransaction transaction = entityManager.getTransaction();
         try {
             transaction.begin();
+
+            Department selectedDepartment = entityManager.find(Department.class, newCourse.getDepartment().getDepartmentName());
+            if (selectedDepartment == null) {
+                FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR.toString(), "Department not found."));
+                return null;
+            }
+            newCourse.setDepartment(selectedDepartment);
+
             entityManager.persist(newCourse);
             transaction.commit();
 
@@ -130,6 +155,14 @@ public class CourseBean implements Serializable {
         EntityTransaction transaction = entityManager.getTransaction();
         try {
             transaction.begin();
+
+            Department selectedDepartment = entityManager.find(Department.class, newCourse.getDepartment().getDepartmentName());
+            if (selectedDepartment == null) {
+                FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR.toString(), "Department not found."));
+                return null;
+            }
+            newCourse.setDepartment(selectedDepartment);
+
             entityManager.merge(newCourse); // Assuming newCourse has the courseId
             transaction.commit();
             newCourse = new Course(); // Reset the form

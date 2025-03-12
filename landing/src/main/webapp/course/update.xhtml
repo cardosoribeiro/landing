@@ -19,7 +19,7 @@
 
 <h:body>
 
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">  
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
         <div class="container">
             <a class="navbar-brand" href="#{request.contextPath}/">Landing</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -63,7 +63,9 @@
 
                             <div class="mb-3">
                                 <h:outputLabel for="department" value="Department:" styleClass="form-label"/>
-                                <h:inputText id="department" value="#{courseBean.newCourse.departmentName}" required="true" styleClass="form-control"/>
+                                <h:selectOneMenu id="department" value="#{courseBean.newCourse.department.departmentName}" required="true" styleClass="form-select">
+                                    <f:selectItems value="#{courseBean.departments}" var="dept" itemValue="#{dept.departmentName}" itemLabel="#{dept.departmentName}" />
+                                </h:selectOneMenu>
                                 <div class="invalid-feedback">Department is required.</div>
                             </div>
 
