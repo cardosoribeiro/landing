@@ -3,17 +3,18 @@ package br.com.landing.beans;
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ViewScoped;
 import java.io.Serializable;
-import javax.faces.application.FacesMessage;
-import javax.faces.context.FacesContext;
 import javax.persistence.*;
 import java.util.List;
 import javax.annotation.PostConstruct;
-
 import javax.faces.event.ComponentSystemEvent;
 import java.util.Map;
+import javax.faces.context.FacesContext;
 
 import br.com.landing.entity.Course;
 import br.com.landing.entity.Department;
+
+import br.com.landing.repository.Repository;
+import br.com.landing.utils.FacesMessageUtils;
 
 @ManagedBean(name = "courseBean")
 @ViewScoped
@@ -21,6 +22,8 @@ public class CourseBean implements Serializable {
 
     @PersistenceContext(unitName = "landing-pu")
     private EntityManager entityManager;
+    private Repository<Course> courseRepository;
+    private Repository<Department> departmentRepository;
 
     private List<Course> courses;
     private List<Department> departments;
@@ -33,7 +36,7 @@ public class CourseBean implements Serializable {
         return departments;
     }
 
-    private Course newCourse = new Course(); // Initialize newCourse!
+    private Course newCourse = new Course();
 
     public Course getNewCourse() {
         return newCourse;
@@ -45,78 +48,63 @@ public class CourseBean implements Serializable {
 
     private void testEntityManager() {
         if (entityManager == null) {
-            System.out.println("\n\nEntityManager is NULL!"); // Check logs        
+            System.out.println("EntityManager is NULL!");
         } else {
-            System.out.println("\n\nEntityManager is NOT NULL!"); // Check logs
-        }        
+            System.out.println("EntityManager is NOT NULL!");
+        }
     }
 
-    @PostConstruct  // Recommended way to initialize courses
+    @PostConstruct
     private void init() {
         try {
-            EntityManagerFactory emf = Persistence.createEntityManagerFactory("landing-pu"); // Same name!
+            EntityManagerFactory emf = Persistence.createEntityManagerFactory("landing-pu"); 
             entityManager = emf.createEntityManager();
-            
-            this.testEntityManager();
+
+            courseRepository = new Repository<>(entityManager, Course.class);
+            departmentRepository = new Repository<>(entityManager, Department.class);
             loadDepartments();
             loadCourses();
-
         } catch (Exception e) {
-            e.printStackTrace(); // Log the exception!
-        }        
+            e.printStackTrace();
+            FacesMessageUtils.addErrorMessage("Error initializing CourseBean: " + e.getMessage());
+        }
     }
 
     private void loadDepartments() {
         try {
-            TypedQuery<Department> query = entityManager.createQuery("SELECT d FROM Department d", Department.class);
-            departments = query.getResultList();
+            departments = departmentRepository.findAll();
         } catch (Exception e) {
             e.printStackTrace();
-            FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR.toString(), "Error loading departments."));
+            FacesMessageUtils.addErrorMessage("Error loading departments.");
         }
     }
 
     private void loadCourses() {
-        this.testEntityManager();
-
         try {
-            TypedQuery<Course> query = entityManager.createQuery("SELECT c FROM Course c", Course.class);
-            courses = query.getResultList();
+            courses = courseRepository.findAll();
         } catch (Exception e) {
-            e.printStackTrace(); // Handle exceptions appropriately in a real app
-            FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR.toString(), "Error loading courses."));
+            e.printStackTrace();
+            FacesMessageUtils.addErrorMessage("Error loading courses.");
         }
     }
 
-
     public String addCourse() {
-        this.testEntityManager();
-
-        EntityTransaction transaction = entityManager.getTransaction();
         try {
-            transaction.begin();
-
-            Department selectedDepartment = entityManager.find(Department.class, newCourse.getDepartment().getDepartmentName());
+            Department selectedDepartment = departmentRepository.findById(newCourse.getDepartment().getDepartmentName());
             if (selectedDepartment == null) {
-                FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR.toString(), "Department not found."));
+                FacesMessageUtils.addErrorMessage("Department not found.");
                 return null;
             }
             newCourse.setDepartment(selectedDepartment);
-
-            entityManager.persist(newCourse);
-            transaction.commit();
-
-            newCourse = new Course(); // Reset the form
-            FacesContext.getCurrentInstance().addMessage(null, new FacesMessage("Course added successfully!"));
-            return "/course/list.xhtml"; // Or stay on the same page: return null;
-
+            courseRepository.persist(newCourse);
+            newCourse = new Course();
+            loadCourses();
+            FacesMessageUtils.addInfoMessage("Course added successfully!");
+            return "/course/list.xhtml";
         } catch (Exception e) {
             e.printStackTrace();
-            if (transaction.isActive()) {
-                transaction.rollback();
-            }
-            FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR.toString(), "Error adding course: " + e.getMessage()));
-            return null; // Stay on the same page in case of error
+            FacesMessageUtils.addErrorMessage("Error adding course: " + e.getMessage());
+            return null;
         }
     }
 
@@ -124,85 +112,59 @@ public class CourseBean implements Serializable {
         FacesContext context = FacesContext.getCurrentInstance();
         Map<String, String> params = context.getExternalContext().getRequestParameterMap();
         String courseId = params.get("courseId");
-    
         if (courseId != null) {
-            newCourse.setCourseId(courseId); // Set the ID in your bean
-            editCourse(); // Then call your editCourse method
+            newCourse.setCourseId(courseId);
+            editCourse();
         } else {
-            // Handle the case where courseId is missing (e.g., redirect or error message)
+            FacesMessageUtils.addErrorMessage("Course ID is required for editing.");
         }
     }
-    
-    
-    public void editCourse() {
-        this.testEntityManager();
 
-        if (newCourse.getCourseId() != null) { // Check if courseId is set
-            this.newCourse = entityManager.find(Course.class, newCourse.getCourseId());
-            if (this.newCourse == null){
-                FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR.toString(), "Course not found"));
+    public void editCourse() {        
+        if (newCourse.getCourseId() != null) {
+            newCourse = courseRepository.findById(newCourse.getCourseId());
+            if (newCourse == null) {
+                FacesMessageUtils.addErrorMessage("Course not found");
                 return;
             }
         } else {
-            // Handle the case where courseId is not provided (e.g., redirect or show an error message)
-            FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR.toString(), "Course ID is required for editing."));
+            FacesMessageUtils.addErrorMessage("Course ID is required for editing.");
         }
     }
-    
-    public String updateCourse() {
-        this.testEntityManager();
 
-        EntityTransaction transaction = entityManager.getTransaction();
+    public String updateCourse() {        
         try {
-            transaction.begin();
-
-            Department selectedDepartment = entityManager.find(Department.class, newCourse.getDepartment().getDepartmentName());
+            Department selectedDepartment = departmentRepository.findById(newCourse.getDepartment().getDepartmentName());
             if (selectedDepartment == null) {
-                FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR.toString(), "Department not found."));
+                FacesMessageUtils.addErrorMessage("Department not found.");
                 return null;
             }
             newCourse.setDepartment(selectedDepartment);
-
-            entityManager.merge(newCourse); // Assuming newCourse has the courseId
-            transaction.commit();
-            newCourse = new Course(); // Reset the form
-            loadCourses(); // Refresh the list
-            FacesContext.getCurrentInstance().addMessage(null, new FacesMessage("Course updated successfully!"));
+            courseRepository.merge(newCourse);
+            newCourse = new Course();
+            loadCourses();
+            FacesMessageUtils.addInfoMessage("Course updated successfully!");
             return "/course/list.xhtml";
         } catch (Exception e) {
             e.printStackTrace();
-            if (transaction.isActive()) {
-                transaction.rollback();
-            }
-            FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR.toString(), "Error adding course: " + e.getMessage()));
-            return null; // Stay on the same page in case of error
-        }
-    }    
-
-    public void deleteCourse(String courseId) {
-        this.testEntityManager();
-
-        EntityTransaction transaction = entityManager.getTransaction();
-        try {
-            transaction.begin();
-            Course course = entityManager.find(Course.class, courseId); // Retrieve managed entity
-            if (course != null) {
-                entityManager.remove(course);
-            } else {
-                 FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR.toString(), "Course not found for deletion"));
-                 transaction.rollback(); // Important rollback here
-                 return; // Exit to prevent commit of incomplete transaction
-            }
-            transaction.commit();
-            loadCourses();
-            FacesContext.getCurrentInstance().addMessage(null, new FacesMessage("Course deleted successfully!"));
-        } catch (Exception e) {
-            e.printStackTrace();
-            if (transaction.isActive()) {
-                transaction.rollback();
-            }
-            FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR.toString(), "Error adding course: " + e.getMessage()));
+            FacesMessageUtils.addErrorMessage("Error updating course: " + e.getMessage());
+            return null;
         }
     }
-    
+
+    public void deleteCourse(String courseId) {
+        try {
+            Course course = courseRepository.findById(courseId);
+            if (course != null) {
+                courseRepository.remove(course);
+                loadCourses();
+                FacesMessageUtils.addInfoMessage("Course deleted successfully!");
+            } else {
+                FacesMessageUtils.addErrorMessage("Course not found for deletion");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            FacesMessageUtils.addErrorMessage("Error deleting course: " + e.getMessage());
+        }
+    }
 }
