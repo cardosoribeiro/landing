@@ -48,11 +48,13 @@
                     <div class="card-header">
                         <h1>Update Course</h1>
                     </div>
+                    
                     <div class="card-body">
-
+                        <h:messages globalOnly="true" styleClass="alert alert-info" />
                         <f:event type="preRenderView" listener="#{courseBean.loadCourseForEdit}" />
 
                         <h:form styleClass="needs-validation">
+                            <h:messages styleClass="alert alert-danger" />
                             <h:inputHidden value="#{courseBean.newCourse.courseId}" />
 
                             <div class="mb-3">
@@ -75,7 +77,7 @@
                                 <div class="invalid-feedback">Credits is required.</div>
                             </div>
 
-                            <h:commandButton value="Update" action="#{courseBean.updateCourse}" styleClass="btn btn-primary"/>
+                            <h:commandButton value="Update" action="#{courseBean.updateCourse}" styleClass="btn btn-primary"/>                            
                         </h:form>
 
                     </div>

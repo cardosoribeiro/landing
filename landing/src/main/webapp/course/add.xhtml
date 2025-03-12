@@ -47,7 +47,9 @@
                         <h1>Courses</h1>
                     </div>
                     <div class="card-body">
+                        <h:messages globalOnly="true" styleClass="alert alert-info" />
                         <h:form styleClass="needs-validation" role="form">
+                            <h:messages styleClass="alert alert-danger" />
                             <div class="mb-3">
                                 <h:outputLabel for="courseId" value="Course ID:" styleClass="form-label" />
                                 <h:inputText id="courseId" value="#{courseBean.newCourse.courseId}" required="true" styleClass="form-control" />
